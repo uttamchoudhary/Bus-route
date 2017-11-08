@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Shuttl bus path</title>
+    <style>
+        #map {
+            height: 100%;
+        }
+        
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <script>
+        function initMap() {
+            var directionsService = new google.maps.DirectionsService;
+            var map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 14,
+                center: {
+                    lat: 28.412839,
+                    lng: 77.041664
+                },
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+            });
+            var directionsDisplay = new google.maps.DirectionsRenderer({
+                map: map
+            });
+
+            var flightPlanCoordinates = [{
+                lat: 28.412839,
+                lng: 77.041664
+            }, {
+                lat: 28.421507,
+                lng: 77.039018
+            }, {
+                lat: 28.427017,
+                lng: 77.037505
+            }, {
+                lat: 28.429536,
+                lng: 77.040552
+            }];
+            var flightPath = new google.maps.Polyline({
+                path: flightPlanCoordinates,
+                geodesic: true,
+                strokeColor: '#4285f4',
+                strokeOpacity: 1.0,
+                strokeWeight: 4
+            });
+
+            showStops(directionsService, directionsDisplay, flightPlanCoordinates, map)
+                //flightPath.setMap(map);
+        }
+
+        function showStops(directionsService, directionsDisplay, flightPlanCoordinates, map) {
+            var marker;
+            for (var i = 0; i < flightPlanCoordinates.length; i++) {
+
+                if (i > 0) {
+                    directionsService.route({
+                        origin: flightPlanCoordinates[i - 1],
+                        destination: flightPlanCoordinates[i],
+                        travelMode: 'DRIVING'
+                    }, function(response, status) {
+                        if (status === 'OK') {
+                            directionsDisplay.setDirections(response);
+                        } else {
+                            window.alert('Directions request failed due to ' + status);
+                        }
+                    });
+                }
+                marker = new google.maps.Marker({
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 5
+                    }
+                });
+                marker.setMap(map);
+                marker.setPosition(flightPlanCoordinates[i]);
+
+            }
+        }
+    </script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCq1Byxe5x_dGo-9tFHoLHqTy18SvMo-5A&callback=initMap">
+    </script>
+</body>
+
+</html>
