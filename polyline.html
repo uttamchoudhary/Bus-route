@@ -97,14 +97,18 @@
 
             showStops(flightPlanCoordinates, map)
             flightPath.setMap(map);
-            animateCircle(flightPath);
+            animateCircle(flightPath, flightPlanCoordinates, map);
         }
 
-        function animateCircle(line) {
+        function animateCircle(line, flightPlanCoordinates, map) {
             var count = 0;
+            var pointA = new google.maps.LatLng(flightPlanCoordinates[0]);
+            var pointB = new google.maps.LatLng(flightPlanCoordinates[flightPlanCoordinates.length - 1]);
+
             window.setInterval(function() {
                 count = (count + 1) % 800;
-
+                var position = google.maps.geometry.spherical.interpolate(pointA, pointB, (count / 800));
+                map.setCenter(position);
                 var icons = line.get('icons');
                 icons[0].offset = (count / 8) + '%';
                 line.set('icons', icons);
