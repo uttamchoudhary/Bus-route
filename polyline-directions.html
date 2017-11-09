@@ -22,33 +22,81 @@
 <body>
     <div id="map"></div>
     <script>
+        var speed = 100; // km/h
+
+        var delay = 1000,
+            target = 0;
+        var flightPlanCoordinates = [{
+            lat: 28.412839,
+            lng: 77.041664
+        }, {
+            lat: 28.421507,
+            lng: 77.039018
+        }, {
+            lat: 28.427017,
+            lng: 77.037505
+        }, {
+            lat: 28.429536,
+            lng: 77.040552
+        }, {
+            lat: 28.432287,
+            lng: 77.046930
+        }, {
+            lat: 28.437011,
+            lng: 77.045957
+        }, {
+            lat: 28.442948,
+            lng: 77.038161
+        }, {
+            lat: 28.448240,
+            lng: 77.038023
+        }, {
+            lat: 28.453622,
+            lng: 77.043232
+        }, {
+            lat: 28.463078,
+            lng: 77.052115
+        }, {
+            lat: 28.489606,
+            lng: 77.080004
+        }, {
+            lat: 28.498286,
+            lng: 77.088410
+        }, {
+            lat: 28.503162,
+            lng: 77.088471
+        }, {
+            lat: 28.506467,
+            lng: 77.083922
+        }, {
+            lat: 28.509734,
+            lng: 77.079330
+        }];
+        var map, marker;
+
         function initMap() {
-            var directionsService = new google.maps.DirectionsService;
-            var map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 14,
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 20,
                 center: {
                     lat: 28.412839,
                     lng: 77.041664
                 },
                 mapTypeId: google.maps.MapTypeId.ROADMAP
             });
+            marker = new google.maps.Marker({
+                position: new google.maps.LatLng(flightPlanCoordinates[0].lat, flightPlanCoordinates[0].lng),
+                map: map
+            });
+            var directionsService = new google.maps.DirectionsService;
+
             var directionsDisplay = new google.maps.DirectionsRenderer({
                 map: map
             });
 
-            var flightPlanCoordinates = [{
-                lat: 28.412839,
-                lng: 77.041664
-            }, {
-                lat: 28.421507,
-                lng: 77.039018
-            }, {
-                lat: 28.427017,
-                lng: 77.037505
-            }, {
-                lat: 28.429536,
-                lng: 77.040552
-            }];
+
+            var noOfStops = flightPlanCoordinates.length;
+            var stops = getStops(flightPlanCoordinates);
+
             var flightPath = new google.maps.Polyline({
                 path: flightPlanCoordinates,
                 geodesic: true,
@@ -57,40 +105,78 @@
                 strokeWeight: 4
             });
 
-            showStops(directionsService, directionsDisplay, flightPlanCoordinates, map)
-                //flightPath.setMap(map);
+
+            directionsService.route({
+                origin: flightPlanCoordinates[0],
+                destination: flightPlanCoordinates[noOfStops - 1],
+                travelMode: 'DRIVING',
+                waypoints: stops,
+                optimizeWaypoints: true,
+                provideRouteAlternatives: false
+            }, function(response, status) {
+                if (status === 'OK') {
+                    directionsDisplay.setDirections(response);
+                } else {
+                    window.alert('Directions request failed due to ' + status);
+                }
+            });
+
+            goToPoint(speed);
         }
 
-        function showStops(directionsService, directionsDisplay, flightPlanCoordinates, map) {
-            var marker;
-            for (var i = 0; i < flightPlanCoordinates.length; i++) {
-
-                if (i > 0) {
-                    directionsService.route({
-                        origin: flightPlanCoordinates[i - 1],
-                        destination: flightPlanCoordinates[i],
-                        travelMode: 'DRIVING'
-                    }, function(response, status) {
-                        if (status === 'OK') {
-                            directionsDisplay.setDirections(response);
-                        } else {
-                            window.alert('Directions request failed due to ' + status);
-                        }
-                    });
+        function getStops(flightPlanCoordinates) {
+            var stops = [],
+                stop;
+            for (var i = 1; i < flightPlanCoordinates.length - 1; i++) {
+                stop = {
+                    location: flightPlanCoordinates[i],
+                    stopover: false
                 }
-                marker = new google.maps.Marker({
-                    icon: {
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: 5
-                    }
-                });
-                marker.setMap(map);
-                marker.setPosition(flightPlanCoordinates[i]);
-
+                stops.push(stop);
             }
+            return stops;
+        }
+
+        function goToPoint(km_h) {
+            var lat = marker.position.lat();
+            var lng = marker.position.lng();
+            var step = (km_h * 1000 * delay) / 3600000; // in meters
+
+            var dest = new google.maps.LatLng(
+                flightPlanCoordinates[target].lat, flightPlanCoordinates[target].lng);
+            map.setCenter(marker.getPosition());
+
+            var distance =
+                google.maps.geometry.spherical.computeDistanceBetween(
+                    dest, marker.position); // in meters
+
+            var numStep = distance / step;
+            var i = 0;
+            var deltaLat = (flightPlanCoordinates[target].lat - lat) / numStep;
+            var deltaLng = (flightPlanCoordinates[target].lng - lng) / numStep;
+
+            function moveMarker() {
+                lat += deltaLat;
+                lng += deltaLng;
+                i += step;
+
+                if (i < distance) {
+                    marker.setPosition(new google.maps.LatLng(lat, lng));
+                    setTimeout(moveMarker, delay);
+                } else {
+                    marker.setPosition(dest);
+                    target++;
+                    if (target == flightPlanCoordinates.length) {
+                        target = 0;
+                    }
+
+                    setTimeout(goToPoint, delay);
+                }
+            }
+            moveMarker();
         }
     </script>
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCq1Byxe5x_dGo-9tFHoLHqTy18SvMo-5A&callback=initMap">
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCq1Byxe5x_dGo-9tFHoLHqTy18SvMo-5A&callback=initMap&libraries=geometry">
     </script>
 </body>
 
